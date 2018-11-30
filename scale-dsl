@@ -2,7 +2,7 @@
 dsl:(){ if ((${__blk__-}==1))&&declare -F ::>/dev/null;then ((!$#))||local __dsl__=("$@");:: ${__blarg__[@]+"${__blarg__[@]}"};fi;}
 shopt -q expand_aliases||{ unalias -a;shopt -s expand_aliases;};builtin alias\
 	+='::__;::(){ ((__blk__--<2))||{ "${__dsl__[@]-::no-dsl}" + '\
-	---='::__;::(){ ((__blk__--<2))||{ '\
+	~='::__;::(){ ((__blk__--<2))||{ '\
 	'{{=return;return;};unset -f ::; ' '}}=};__:: "$@"'\
 	-='"${__dsl__[@]-::no-dsl}" - '
 ::__(){ local s="";! declare -F ::>/dev/null||s=$(declare -f ::);__bstk__[__bsp__++]="$s";}

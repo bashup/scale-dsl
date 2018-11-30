@@ -4,24 +4,24 @@ Bash, by its nature, is a very "flat" language, that lacks the ability to cleanl
 
 Enter [scale-dsl](scale-dsl): a bash 3.2+ micro-library that lets you create **S**tructured **C**onfiguration **A**nd **L**anguage **E**xtensions.  By sourcing it, or copy-pasting it in your script, you get access to these three simple syntax enhancements:
 
-* `---` *block-command...* `&& {{` *block...* `}}`
+* `~` *block-command...* `&& {{` *block...* `}}`
 * `+` *block-phrase...*  `&& {{` *block...* `}}`
 * `-` *item-phrase...*
 
-Block commands and phrases wrap the execution of their attached blocks, and control how any nested phrases will be interpreted.  With properly implemented command functions, you can then write code like this:
+Block commands and block phrases wrap the execution of their attached blocks, and control how any nested phrases will be interpreted.  With properly implemented command functions, you can then write code like this:
 
 ```shell
 json-for-contact() {
-    --- json map: && {{
-        - first_name str "$1"
-        - last_name  str "$2"
-        - email      str "$3"
-        + tags list: && {{
-            for tag in "${@:4}"; do
-                - str "$tag"
-            done
-        }}
+  ~ json map: && {{
+    - first_name str "$1"
+    - last_name  str "$2"
+    - email      str "$3"
+    + tags list: && {{
+        for tag in "${@:4}"; do
+            - str "$tag"
+        done
     }}
+  }}
 }
 ```
 
@@ -29,28 +29,25 @@ or this:
 
 ```shell
 hello-world-html() {
-    --- html && {{
-        + head && {{ - title : "Hello world"; }}
-        + body && {{
-            + article'#content' && {{
-                - h1.plain id=top-heading : "Welcome!"
-                - p : "Hello, $1"
-            }}
-        }}
+  ~ html && {{
+    + head && {{ - title : "Hello world"; }}
+    + body && {{
+      + article'#content' && {{
+        - h1.plain id=top-heading : "Welcome!"
+        - p : "Hello, $1"
+      }}
     }}
+  }}
 }
 ```
 
 ...with all the nesting and escaping handled properly.
 
-The basic idea here is that the `---`-prefixed command controls when or whether to run the block that immediately follows it, optionally setting a "DSL interpreter" that will be called whenever a  `+` or `-` phrase is executed from within that block.  For example, here's the simplest possible DSL you can make with SCALE:
+The basic idea here is that a `~`-prefixed command controls when (or whether) to run the block that follows it, optionally setting a "DSL interpreter" that will be called whenever a  `+` or `-` phrase is executed from within that block.  For example, here's the simplest possible DSL you can make with SCALE:
 
 ~~~sh
     $ source scale-dsl  # load the library
-    $ --- dsl: echo && {{
-    >     - Hello
-    >     - World
-    > }}
+    $ ~ dsl: echo && {{ - Hello; - World; }}
     - Hello
     - World
 ~~~
@@ -70,26 +67,26 @@ Now let's try a slightly more complex example, with nesting:
     >     if [[ $block == "+" ]]; then dsl: indent-with "    $indent"; fi
     > }
 
-    $ --- indented && {{
-    >     - This is a test
-    >     + of indenting && {{
-    >         - nested
-    >         + deeper && {{
-    >            for i in 1 2 3; do
-    >                - yeah
-    >            done
-    >         }}
-    >         - back out
+    $ ~ indented && {{
+    >   - This is a test
+    >   + of indenting && {{
+    >     - nested
+    >     + deeper && {{
+    >         for i in 1 2 3; do
+    >             - yeah "($i)"
+    >         done
     >     }}
-    >     - and again
+    >     - back out
+    >   }}
+    >   - and again
     > }}
     This is a test
     of indenting
         nested
         deeper
-            yeah
-            yeah
-            yeah
+            yeah (1)
+            yeah (2)
+            yeah (3)
         back out
     and again
 ~~~
@@ -98,15 +95,15 @@ Each basic command in the block that begins with `-` or `+` is forwarded to the 
 
 ## Scripting and Composition
 
-Notice that DSL blocks are still plain bash code, and can therefore use control structures, expressions, parameter expansion, and all other normal commands or functions, in addition to the ones prefixed by  `+`, `-`, or `---`.  Block handlers are dynamically carried down into function calls, so you can put parts of a data structure into functions and then reuse them from different enclosing structures, e.g.:
+Notice that DSL blocks are still plain bash code, and can therefore use control structures, expressions, parameter expansion, and all other normal commands or functions, in addition to the ones prefixed by  `+`, `-`, or `~`.  Block handlers are dynamically carried down into function calls, so you can put parts of a data structure into functions and then reuse them from different enclosing structures, e.g.:
 
 ~~~sh
     $ hello-func() { - "Hello, $1!"; }
 
-    $ --- dsl: echo && {{ hello-func world; }}
+    $ ~ dsl: echo && {{ hello-func world; }}
     - Hello, world!
 
-    $ --- indented && {{
+    $ ~ indented && {{
     >     + "My response:" && {{ hello-func yourself; }};
     > }}
     My response:
@@ -115,7 +112,7 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
 
 Notice how the `-` in the `hello` function produces different results in each use, expanding to `echo -` or `indent-with "    " -`, according to where it's called from.  (Notice, too, that we called it as a *normal bash function*, not as a `-` line unto itself.  If we had, then we would have ended up calling e.g. `echo - hello-func world` or `indent-with "    " - hello-func yourself`, which would have produced rather different results!)
 
-Although you can separate what's inside a  `{{`...`}}` block or its header into different functions, do note that you *can't* separate the block itself from its opening `+` or `---`: they **must** be immediately adjacent and within the same enclosing bash block or control structure.  (Otherwise, a syntax error will occur.)
+Although you can separate what's inside a  `{{`...`}}` block or its header into different functions, do note that you *can't* separate the block itself from its opening `+` or `~`: they **must** be immediately adjacent and within the same enclosing bash block or control structure.  (Otherwise, a syntax error will occur.)
 
 ### Variables and Parameters
 
@@ -136,15 +133,19 @@ This order applies to the handlers, too, in that they can see local variables fr
 
 ### Controlling Block Execution and Interpretation
 
-If you're designing a DSL or API, note that calling `dsl:` from a `---` command or `+` phrase is strictly optional; if you *don't* call it, the code within `{{`...`}}` simply won't be executed.  A given block can also only be executed *once*: calling `dsl:` more than once will have no effect (unless the calls are done inside a subshell).  Calling `dsl:` with no arguments runs the block without changing the current interpreter.
+If you're designing a DSL or API, note that calling `dsl:` from a `~` command or `+` phrase is strictly optional; if you *don't* call it, the code within `{{`...`}}` simply won't be executed.  A given block can also only be executed *once*: calling `dsl:` more than once will have no effect (unless the calls are done inside a subshell).  Calling `dsl:` with no arguments runs the block without changing the current interpreter.
 
 If no block handler is defined (i.e. if you use `+` or `-` without an enclosing block), a block handler called `::no-dsl` will be invoked, if it is defined.  (If your program does not have a `::no-dsl` function and a `::no-dsl` command does not exist on your `PATH`, an error will occur.)
 
 ## Compatibility Notes
 
-SCALE is implemented mainly using bash aliases (for `+` , `-`, `---`, `{{` and `}}`), and the public `dsl:` function.  Internally, however, SCALE reserves three additional function names for its own use (aside from `::no-dsl`), and has several private variables.  To avoid unwanted and unpredictable behavior, you should not use or define functions named `::__`, `::`, or `__::`, nor should you set, unset, or declare variables named `__blk__`, `__blarg__`, `__bstk__`,  `__bptr__`, or `__dsl__`.
+SCALE is implemented mainly using bash aliases (for `+` , `-`, `~`, `{{` and `}}`), and the public `dsl:` function.  Internally, however, SCALE reserves three additional function names for its own use (aside from `::no-dsl`), and has several private variables.  To avoid unwanted and unpredictable behavior, you should not use or define functions named `::__`, `::`, or `__::`, nor should you set, unset, or declare variables named `__blk__`, `__blarg__`, `__bstk__`,  `__bptr__`, or `__dsl__`.
 
-For optimum performance, SCALE is carefully written to avoid forking.  However, if a header function or handler uses blocks itself (or calls other code that does) *before* the enclosing block is executed, a `$(declare -f ::)` substitution is required to save the source code of not-yet-executed block.  You can avoid this overhead by ensuring that any other block-using code is run *after* your handler calls `dsl:`.
+For optimum performance, SCALE is carefully written to avoid forking.  However, if a header function or handler uses blocks itself (or calls other code that does) *before* the enclosing block is executed, a `$(declare -f ::)` substitution is required to save the source code of the not-yet-executed block.  You can avoid this overhead by ensuring that any other block-using code is run *after* your handler calls `dsl:`.
+
+SCALE syntax is mostly compatible with shellcheck, except that you need to disable SC2215 (Commands beginning with `-`) and SC1054 (double braces).  Adding `# shellcheck disable=1054,2215` on the line before a block begins (or the enclosing function, if any) will disable them locally, or you can disable them at the project level if you prefer.
+
+Finally, note that if you need to run actual programs or functions named `+` , `-`, `~`, `{{` or `}}`, you simply need to precede them with a `\` or enclose them in quotes.  This will stop the shell from expanding them as aliases.  If the code that does it can't be changed, you can disable the `expand_aliases` shell option while sourcing the code, then re-enable afterward, since aliases are expanded when the code is *compiled*, not when it's run.  Function that were defined with the aliases active, will not be affected by later disabling of alias expansion, and vice versa.
 
 ## License
 
