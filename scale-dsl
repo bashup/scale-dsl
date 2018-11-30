@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+dsl:(){ if ((${__blk__-}==1))&&declare -F ::>/dev/null;then ((!$#))||local __dsl__=("$@");:: ${__blarg__[@]+"${__blarg__[@]}"};fi;}
+shopt -q expand_aliases||{ unalias -a;shopt -s expand_aliases;};builtin alias\
+	+='::__;::(){ ((__blk__--<2))||{ "${__dsl__[@]-::no-dsl}" + '\
+	---='::__;::(){ ((__blk__--<2))||{ '\
+	'{{=return;return;};unset -f ::; ' '}}=};__:: "$@"'\
+	-='"${__dsl__[@]-::no-dsl}" - '
+::__(){ local s="";! declare -F ::>/dev/null||s=$(declare -f ::);__bstk__[__bsp__++]="$s";}
+__::(){ __blk__=0;local __blarg__=("$@") __blk__=2 s;if :: "$@";then s=0;else s=$?;fi;unset -f ::;eval "${__bstk__[--__bsp__]}";unset '__bstk__[__bsp__]';return $s;}
+__bsp__=0;: "${__dsl__[@]-}"
