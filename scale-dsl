@@ -3,7 +3,7 @@ dsl:(){ ((!$#))||local __dsl__=("$@");${__blk__:+::};}
 shopt -q expand_aliases||{ unalias -a;shopt -s expand_aliases;};builtin alias\
 	+='{ ::__;::(){ ((!$#))||{ local __blarg__=("$@");shift;"${__dsl__[@]-::no-dsl}" + '\
 	~='{ ::__;::(){ ((!$#))||{ local __blarg__=("$@");shift; '\
-	'{{=return;return;};unset -f ::;__blk__=;set -- "${__blarg__[@]:1}"}; ' '}}=};__blk__=1;:: . "$@";__::;}'\
+	'{{=return;return;};unset -f ::;__blk__=;set -- "${__blarg__[@]:1}"; ' '}}=};__blk__=1;:: . "$@";__::;}'\
 	-='"${__dsl__[@]-::no-dsl}" - '
 ::__(){ __bstk__[__bsp__++]="${__blk__:+$(declare -f ::)}";}
 __::(){ local s=$?;unset -f ::;__blk__=;eval "${__bstk__[--__bsp__]}";return $s;}
