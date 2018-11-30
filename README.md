@@ -8,10 +8,10 @@ Enter [scale-dsl](scale-dsl): a bash 3.2+ micro-library that lets you create **S
 * `+` *block-phrase...*  `&& {{` *block...* `}}`
 * `-` *item-phrase...*
 
-Block commands and block phrases wrap the execution of their attached blocks, and control how any nested phrases will be interpreted.  With properly implemented command functions, you can then write code like this:
+Block commands and block phrases wrap the execution of their attached blocks, and control how any nested phrases will be interpreted.  With properly implemented block functions (e.g. [demos/scale-json](demos/scale-json)), you can then write code like this:
 
 ```shell
-json-for-contact() {
+contact-as-json() {
   ~ json map: && {{
     - first_name str "$1"
     - last_name  str "$2"
@@ -104,7 +104,7 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
     - Hello, world!
 
     $ ~ indented && {{
-    >     + "My response:" && {{ hello-func yourself; }};
+    >   + "My response:" && {{ hello-func yourself; }};
     > }}
     My response:
         Hello, yourself!
@@ -143,9 +143,9 @@ SCALE is implemented mainly using bash aliases (for `+` , `-`, `~`, `{{` and `}}
 
 For optimum performance, SCALE is carefully written to avoid forking.  However, if a header function or handler uses blocks itself (or calls other code that does) *before* the enclosing block is executed, a `$(declare -f ::)` substitution is required to save the source code of the not-yet-executed block.  You can avoid this overhead by ensuring that any other block-using code is run *after* your handler calls `dsl:`.
 
-SCALE syntax is mostly compatible with shellcheck, except that you need to disable SC2215 (Commands beginning with `-`) and SC1054 (double braces).  Adding `# shellcheck disable=1054,2215` on the line before a block begins (or the enclosing function, if any) will disable them locally, or you can disable them at the project level if you prefer.
+SCALE syntax is mostly compatible with [shellcheck](https://www.shellcheck.net/), except that you need to disable [SC2215](https://github.com/koalaman/shellcheck/wiki/SC2215) (Commands beginning with `-`) and [SC1054](https://github.com/koalaman/shellcheck/wiki/SC1054) (double braces).  Adding `# shellcheck disable=1054,2215` on the line before a block begins (or the enclosing function, if any) will disable them locally, or you can disable them at the project level if you prefer.
 
-Finally, note that if you need to run actual programs or functions named `+` , `-`, `~`, `{{` or `}}`, you simply need to precede them with a `\` or enclose them in quotes.  This will stop the shell from expanding them as aliases.  If the code that does it can't be changed, you can disable the `expand_aliases` shell option while sourcing the code, then re-enable afterward, since aliases are expanded when the code is *compiled*, not when it's run.  Function that were defined with the aliases active, will not be affected by later disabling of alias expansion, and vice versa.
+Finally, note that if you need to run actual programs or functions named `+` , `-`, `~`, `{{` or `}}`, you can simply prefix them with a `\` or enclose them in quotes.  This will stop the shell from expanding them as aliases.  If the code that does it can't be changed, you can disable the `expand_aliases` shell option while sourcing the code, then re-enable afterward, since aliases are expanded when the code is *compiled*, not when it's run.  Function that were defined with the aliases active, will not be affected by later disabling of alias expansion, and vice versa.
 
 ## License
 
