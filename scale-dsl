@@ -6,5 +6,5 @@ shopt -q expand_aliases||{ unalias -a;shopt -s expand_aliases;};builtin alias\
 	'{{=return;return;};__blk__=;set -- "${__blarg__[@]:1}"; ' '}}=};__blk__=1;:: . "$@";__::;}'\
 	-='"${__dsl__[@]-::no-dsl}" - '
 ::__(){ __bstk__[__bsp__++]="${__blk__:+__blk__=1;$(declare -f ::)}";}
-__::(){ local s=$?;__blk__=;eval "${__bstk__[--__bsp__]}";return $s;}
+__::(){ local s=$?;__blk__=;${__bstk__[--__bsp__]:+eval "${__bstk__[__bsp__]}"};return $s;}
 __bsp__=;:${__dsl__+}
