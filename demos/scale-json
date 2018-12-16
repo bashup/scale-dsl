@@ -11,12 +11,12 @@ json() {
 json.map:(){
 	local items=(); dsl: __mapitem; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
 }
-__mapitem() { json.str "$2"; local key=$REPLY; json "${@:3}"; items+=("$key:$REPLY,"); }
+__mapitem() { json.str "$1"; local key=$REPLY; json "${@:2}"; items+=("$key:$REPLY,"); }
 
 json.list:(){
 	local items=(); dsl: __listitem; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
 }
-__listitem(){ json "${@:2}"; items+=("$REPLY,"); }
+__listitem(){ json "$@"; items+=("$REPLY,"); }
 
 json.json() { REPLY=$1; }
 json.true() { REPLY=true; }

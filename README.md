@@ -4,19 +4,21 @@ Bash, by its nature, is a very "flat" language, that lacks the ability to cleanl
 
 Enter [scale-dsl](scale-dsl): a bash 3.2+ micro-library that lets you create **S**tructured **C**onfiguration **A**nd **L**anguage **E**xtensions.  By sourcing it, or copy-pasting it into your script, you get access to these three simple syntax enhancements:
 
-* `~` *block-command...* `&& {{` *block...* `}}`
-* `+` *block-phrase...*  `&& {{` *block...* `}}`
+* `~` *block-command...* `{{` *block...* `}}`
+* `+` *block-phrase...*  `{{` *block...* `}}`
 * `-` *item-phrase...*
 
 Block commands and block phrases wrap the execution of their attached blocks, and control how any nested phrases will be interpreted.  With properly implemented block functions (e.g. [demos/scale-json](demos/scale-json)), you can then write code like this:
 
 ```shell
 contact-as-json() {
-  ~ json map: && {{
+  ~ json map:
+  {{
     - first_name str "$1"
     - last_name  str "$2"
     - email      str "$3"
-    + tags list: && {{
+    + tags list:
+    {{
         local tag
         for tag in "${@:4}"; do
             - str "$tag"
@@ -45,11 +47,11 @@ The basic idea of SCALE DSLs is that a `~`-prefixed command controls when (or wh
 ~~~sh
     $ source scale-dsl  # load the library
     $ ~ dsl: echo && {{ - Hello; - World; }}
-    - Hello
-    - World
+    Hello
+    World
 ~~~
 
-In this example, the command `dsl: echo` tells SCALE to run the block and pass any `-` or `+` phrases to `echo` as arguments.  So `- Hello` and `- World` get echoed.
+In this example, the command `dsl: echo` tells SCALE to run the block and pass any `-` or `+` phrases to `echo` as arguments.  So `Hello` and `World` get echoed.
 
 Now let's try a slightly more complex example, with nesting:
 
@@ -59,9 +61,9 @@ Now let's try a slightly more complex example, with nesting:
 
     $ indent-with() {
     >     # Output the indent and the input, skipping the + or - in between
-    >     local indent=$1 block=$2; shift 2; echo "$indent$*"
+    >     local indent=$1; shift; echo "$indent$*"
     >     # Got a block?  Run it with a deeper indent
-    >     if [[ $block == "+" ]]; then dsl: indent-with "    $indent"; fi
+    >     dsl: indent-with "    $indent"
     > }
 
     $ ~ indented && {{
@@ -88,7 +90,7 @@ Now let's try a slightly more complex example, with nesting:
     and again
 ~~~
 
-Each basic command in the block that begins with `-` or `+` is forwarded to the DSL interpreter as command line arguments.  So the line `- This is a test` becomes `indent-with "" - This is a test`, and `+ of indenting` becomes `indent-with "" + of indenting`.  The `indent-with` function then detects the presence of a block via the `+`, and runs the nested block with a deeper indent.
+Each basic command in the block that begins with `-` or `+` is forwarded to the DSL interpreter as command line arguments.  So the line `- This is a test` becomes `indent-with "" This is a test`, and `+ of indenting` becomes `indent-with "" of indenting`.  The `indent-with` function then runs any nested block with a deeper indent.
 
 ## Scripting and Composition
 
@@ -98,7 +100,7 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
     $ say-hello() { - "Hello, $1!"; }
 
     $ ~ dsl: echo && {{ say-hello world; }}
-    - Hello, world!
+    Hello, world!
 
     $ ~ indented && {{
     >   + "My response:" && {{ say-hello yourself; }};
@@ -107,7 +109,7 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
         Hello, yourself!
 ~~~
 
-Notice how the `-` in the `say-hello` function produces different results in each use, expanding to `echo -` or `indent-with "    " -`, according to where it's called from.  (Notice, too, that we invoked it as a *normal bash function*, not as a `-` line unto itself.  If we had put a `-` in front of it, we would have ended up calling  `echo - say-hello world` and `indent-with "    " - say-hello yourself`, which would have produced rather different results!)
+Notice how the `-` in the `say-hello` function produces different results in each use, expanding to `echo` or `indent-with "    "`, according to where it's called from.  (Notice, too, that we invoked it as a *normal bash function*, not as a `-` line unto itself.  If we had put a `-` in front of it, we would have ended up calling  `echo say-hello world` and `indent-with "    " say-hello yourself`, which would have produced rather different results!)
 
 Although you *can* separate what's inside a  `{{`...`}}` block into different functions, do note that you *can't* separate a block from its opening `+` or `~` statement: they **must** be immediately adjacent and within the same enclosing bash block or control structure.  (Otherwise, a bash syntax error will occur.)
 
@@ -145,6 +147,8 @@ For optimum performance, SCALE is carefully written to avoid forking.  However, 
 SCALE syntax is mostly compatible with [shellcheck](https://www.shellcheck.net/), except that you need to disable [SC2215](https://github.com/koalaman/shellcheck/wiki/SC2215) (Commands beginning with `-`) and [SC1054](https://github.com/koalaman/shellcheck/wiki/SC1054) (doubled braces).  Adding `# shellcheck disable=1054,2215` on the line before a block begins (or the enclosing function, if any) will disable them locally, or you can disable them at the project level if you prefer.
 
 Finally, note that if you need to run actual programs or functions named `+` , `-`, `~`, `{{` or `}}`, you can simply prefix them with a `\` or enclose them in quotes.  This will stop the shell from expanding them as aliases.  If the code can't easily be changed, you can simply source it *before* `scale-dsl`, or else disable the `expand_aliases` shell option while sourcing it, and re-enable it afterward.  Bash expands aliases expanded while code is being *compiled*, not when it's run, so you can have DSL-using and non-DSL-using functions in the same program, with different understandings of what `-`, `+`, etc. mean.
+
+(Also, if you're using bash 4.4's new `local -` construct, please note that it has [a bug that disables alias expansion in scripts](https://lists.gnu.org/archive/html/bug-bash/2018-12/msg00023.html).  If you call such a function before all of your source code has been read, you'll need to re-enable alias expansion, *outside* the function, after the call is made.)
 
 ## License
 
