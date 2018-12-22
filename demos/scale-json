@@ -9,12 +9,12 @@ json() {
 }
 
 json.map:(){
-	local items=(); dsl: __mapitem; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
+	local items=(); ::block __mapitem; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
 }
 __mapitem() { json.str "$1"; local key=$REPLY; json "${@:2}"; items+=("$key:$REPLY,"); }
 
 json.list:(){
-	local items=(); dsl: __listitem; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
+	local items=(); ::block __listitem; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
 }
 __listitem(){ json "$@"; items+=("$REPLY,"); }
 

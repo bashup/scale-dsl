@@ -6,7 +6,7 @@ It's possible in the header of a block (the part before the `{{`) to call a func
     $ set -u  # Show errors if any undefined variables are used
     $ . scale-dsl
 
-    $ f1() { ~ dsl: && {{ echo "nested"; }}; dsl:; }
+    $ f1() { ~ ::block && {{ echo "nested"; }}; ::block; }
     $ ~ f1 && {{ echo "not nested"; }}
     nested
     not nested
@@ -29,7 +29,7 @@ Given that the block stack exists, it's possible to tweak its contents to create
     $ ~
     >   echo; echo "begin header"
     >   defer: echo "defer 1 from header"
-    >   dsl:
+    >   ::block
     >   defer: echo "defer 2 from header"
     >   echo "end header"; echo
     >   {{
@@ -63,7 +63,7 @@ In order to support extensions like this, `scale-dsl` wraps the execution of the
     >   defer: set +e
     >   defer: eval 'echo $? "${REPLY[@]}"'
     >   defer: mess
-    >   dsl:
+    >   ::block
     >   {{
     >     REPLY=(what up)
     >     return 42

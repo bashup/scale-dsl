@@ -46,24 +46,24 @@ The basic idea of SCALE DSLs is that a `~`-prefixed command controls when (or wh
 
 ~~~sh
     $ source scale-dsl  # load the library
-    $ ~ dsl: echo && {{ - Hello; - World; }}
+    $ ~ ::block echo && {{ - Hello; - World; }}
     Hello
     World
 ~~~
 
-In this example, the command `dsl: echo` tells SCALE to run the block and pass any `-` or `+` phrases to `echo` as arguments.  So `Hello` and `World` get echoed.
+In this example, the command `::block echo` tells SCALE to run the block and pass any `-` or `+` phrases to `echo` as arguments.  So `Hello` and `World` get echoed.
 
 Now let's try a slightly more complex example, with nesting:
 
 ~~~sh
     # Set the initial indent
-    $ indented() { dsl: indent-with ""; }
+    $ indented() { ::block indent-with ""; }
 
     $ indent-with() {
     >     # Output the indent and the input, skipping the + or - in between
     >     local indent=$1; shift; echo "$indent$*"
     >     # Got a block?  Run it with a deeper indent
-    >     dsl: indent-with "    $indent"
+    >     ::block indent-with "    $indent"
     > }
 
     $ ~ indented && {{
@@ -99,7 +99,7 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
 ~~~sh
     $ say-hello() { - "Hello, $1!"; }
 
-    $ ~ dsl: echo && {{ say-hello world; }}
+    $ ~ ::block echo && {{ say-hello world; }}
     Hello, world!
 
     $ ~ indented && {{
@@ -121,11 +121,11 @@ Within any given block, local variables from any enclosing blocks or containing/
 
 * `$1, $2...` etc. from the enclosing function or script (no matter how deeply nested the blocks)
 * locals defined within that block
-* locals defined by the interpreter that called `dsl:` to run the block
+* locals defined by the interpreter that called `::block` to run the block
 * locals defined by the enclosing block
-* locals defined by the interpreter that called `dsl:` to run the enclosing block
+* locals defined by the interpreter that called `::block` to run the enclosing block
 * ...
-* locals defined by the command that called `dsl:` on the outermost block
+* locals defined by the command that called `::block` on the outermost block
 * locals defined outside the outermost block (e.g. the enclosing function, if any)
 * locals defined by the caller(s)
 * globals
@@ -134,15 +134,15 @@ This order applies to the interpreters, too, in that they can see local variable
 
 ### Controlling Block Execution and Interpretation
 
-If you're designing a DSL or API, note that calling `dsl:` from a `~` command or `+` phrase is strictly optional; if you *don't* call it, the code within `{{`...`}}` simply won't be executed.  A given block can only be executed *once*, however: calling `dsl:` more than once for the same block will have no effect (unless the calls are done inside a subshell).  Calling `dsl:` with no arguments runs the block without changing the current interpreter.
+If you're designing a DSL or API, note that calling `::block` from a `~` command or `+` phrase is strictly optional; if you *don't* call it, the code within `{{`...`}}` simply won't be executed.  A given block can only be executed *once*, however: calling `::block` more than once for the same block will have no effect (unless the calls are done inside a subshell).  Calling `::block` with no arguments runs the block without changing the current interpreter.
 
 If no DSL interpreter is defined (i.e. if you use `+` or `-` without an enclosing block), a DSL interpreter called `::no-dsl` will be invoked (if it exists).  If your program does not have a `::no-dsl` function and a `::no-dsl` command does not exist on your `PATH`, an error will occur.
 
 ## Compatibility Notes
 
-SCALE is implemented mainly using bash aliases (for `+` , `-`, `~`, `{{` and `}}`), and the public `dsl:` function.  Internally, however, SCALE reserves three additional function names for its own use (aside from `::no-dsl`), and has several private variables.  To avoid unwanted and unpredictable behavior, you should not use or define functions named `::__`, `::`, or `__::`, nor should you set, unset, or declare variables named `__blk__`, `__blarg__`, `__bstk__`,  `__bsp__`, or `__dsl__`.
+SCALE is implemented mainly using bash aliases (for `+` , `-`, `~`, `{{` and `}}`), and the public `::block` function.  Internally, however, SCALE reserves three additional function names for its own use (aside from `::no-dsl`), and has several private variables.  To avoid unwanted and unpredictable behavior, you should not use or define functions named `::__`, `::`, or `__::`, nor should you set, unset, or declare variables named `__blk__`, `__blarg__`, `__bstk__`,  `__bsp__`, or `__dsl__`.
 
-For optimum performance, SCALE is carefully written to avoid forking.  However, if a header function or DSL interpreter uses blocks itself (or calls other code that does) *before* the enclosing block is executed, a `$(declare -f ::)` substitution is required to save the source code of the not-yet-executed block.  You can avoid this overhead by ensuring that any other block-using code is run *after* your code calls `dsl:`.
+For optimum performance, SCALE is carefully written to avoid forking.  However, if a header function or DSL interpreter uses blocks itself (or calls other code that does) *before* the enclosing block is executed, a `$(declare -f ::)` substitution is required to save the source code of the not-yet-executed block.  You can avoid this overhead by ensuring that any other block-using code is run *after* your code calls `::block`.
 
 SCALE syntax is mostly compatible with [shellcheck](https://www.shellcheck.net/), except that you need to disable [SC2215](https://github.com/koalaman/shellcheck/wiki/SC2215) (Commands beginning with `-`) and [SC1054](https://github.com/koalaman/shellcheck/wiki/SC1054) (doubled braces).  Adding `# shellcheck disable=1054,2215` on the line before a block begins (or the enclosing function, if any) will disable them locally, or you can disable them at the project level if you prefer.
 
