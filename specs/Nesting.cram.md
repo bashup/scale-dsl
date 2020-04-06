@@ -60,12 +60,12 @@ In order to support extensions like this, `scale-dsl` wraps the execution of the
 ~~~sh
     $ mess() { echo "Imma change everything"; REPLY=blah; return 99;}
     $ ~ set -e
-    >   defer: set +e
     >   defer: eval 'echo $? "${REPLY[@]}"'
     >   defer: mess
     >   ::block
     >   {{
     >     REPLY=(what up)
+    >     set +e
     >     return 42
     >   }}
     > echo "$?" "${REPLY[@]}"
