@@ -1,6 +1,6 @@
 ## Block Nesting and Deferred commands
 
-It's possible in the header of a block (the part before the `{{`) to call a function that defines another function that uses a block.  To handle this scenario, `scale-dsl` implements a "block stack" using the `__bstk__` array and` __bsp__` stack pointer.  Without it, a scenario like this one would fail:
+It's possible in the header of a block (the part before the `{{`) to call a function that defines another function that uses a block.  To handle this scenario, `scale-dsl` implements a "block stack" using the `__bsp__` array.  Without it, a scenario like this one would fail:
 
 ~~~sh
     $ set -u  # Show errors if any undefined variables are used
@@ -16,12 +16,12 @@ Given that the block stack exists, it's possible to tweak its contents to create
 
 ~~~sh
     $ defer:(){
-    >     ((__bsp__&&$#))||return
-    >     local r;printf -v r \ %q "$@";__bstk__[__bsp__-1]="$r;${__bstk__[__bsp__-1]}"
+    >     (($#))||return; ${__bsp__[1]+:} trap 'set +e; eval "${__bsp__[*]}"' EXIT
+    >     local r;printf -v r \ %q "$@";__bsp__="$r;${__bsp__-}"
     > }
 
-    $ defer: echo 42   # fail, not in a block
-    [1]
+    $ ( defer: echo 42 )   # not in a block, traps exit
+    42
 
     $ ~ defer:; {{ :; }}   # fail, no arguments
     [1]
@@ -48,9 +48,34 @@ Given that the block stack exists, it's possible to tweak its contents to create
     defer 2 from block
     defer 1 from block
     defer 1 from header
+
+    $ ( defer: echo "exit"
+    > ~
+    >   echo; echo "begin header"
+    >   defer: echo "defer from header"
+    >   ::block
+    >   {{
+    >     echo "begin block"
+    >     defer: echo "defer 1 from block";
+    >     defer: echo "defer 2 from block";
+    >     echo "end block"; echo
+    >     exit 99
+    >   }}
+    > )
+    
+    begin header
+    begin block
+    end block
+    
+    defer 2 from block
+    defer 1 from block
+    defer from header
+    exit
+    [99]
+
 ~~~
 
-The above function runs the command it's given at the end of the "current" block -- i.e. the one that `defer:` is called from, or the one whose header it's called from.  As in Go, commands are stacked and run in reverse order.  They do not have access to the variables or arguments of the header or block, and unless `eval` is used any parameter expansion in the command is done at defer-time, not run-time.
+The above function runs the command it's given at the end of the "current" block -- i.e. the one that `defer:` is called from, or the one whose header it's called from.  (Or if called outside a block, it traps the `EXIT` signal to run all pending deferred operations.)  As in Go, commands are stacked and run in reverse order.  They do not have access to the variables or arguments of the header or block, and unless `eval` is used any parameter expansion in the command is done at defer-time, not run-time.
 
 In order to support extensions like this, `scale-dsl` wraps the execution of the block stack in such a way that:
 

@@ -140,7 +140,7 @@ If no DSL interpreter is defined (i.e. if you use `+` or `-` without an enclosin
 
 ## Compatibility Notes
 
-SCALE is implemented mainly using bash aliases (for `+` , `-`, `~`, `{{` and `}}`), and the public `::block` function.  Internally, however, SCALE reserves three additional function names for its own use (aside from `::no-dsl`), and has several private variables.  To avoid unwanted and unpredictable behavior, you should not use or define functions named `::__`, `::`, or `__::`, nor should you set, unset, or declare variables named `__blk__`, `__blarg__`, `__bstk__`,  `__bsp__`, or `__dsl__`.
+SCALE is implemented mainly using bash aliases (for `+` , `-`, `~`, `{{` and `}}`), and the public `::block` function.  Internally, however, SCALE reserves three additional function names for its own use (aside from `::no-dsl`), and has several private variables.  To avoid unwanted and unpredictable behavior, you should not use or define functions named `::__`, `::`, or `__::`, nor should you set, unset, or declare variables named `__blk__`, `__blarg__`, `__bsp__`, or `__dsl__`.
 
 For optimum performance, SCALE is carefully written to avoid forking.  However, if a header function or DSL interpreter uses blocks itself (or calls other code that does) *before* the enclosing block is executed, a `$(declare -f ::)` substitution is required to save the source code of the not-yet-executed block.  You can avoid this overhead by ensuring that any other block-using code is run *after* your code calls `::block`.
 
