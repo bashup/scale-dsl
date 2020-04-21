@@ -8,7 +8,7 @@
 # Available modules (uncomment to use):
 
 dk use: cram              # run tests using the "cram" functional test tool
-dk use: entr-watch        # watch files and re-run tests or other commands
+dk use: modd-watch        # watch files and re-run tests or other commands
 dk use: shell-console     # make the "console" command enter a subshell
 dk use: bash-kit          # enable doing tests/console/etc. in bash3.2 w/docker
 dk use: shellcheck        # support running shellcheck (via docker if not installed)
@@ -21,3 +21,5 @@ before "test" export PATH="$LOCO_ROOT:$PATH"  # put scale-dsl on PATH
 on     "test" shellcheck scale-dsl
 
 on "boot" require mdsh github bashup/mdsh master bin/mdsh
+
+watch+ "*.md" "specs/*.md" "demos/*" "!.deps/**" "!**/*.md.err" "!**/.~*.md" -- dk test
