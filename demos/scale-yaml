@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+declare -g yaml_indent='  ' yaml_width=120 yaml_prefix='' yaml_key
+yaml() {
+	if declare -F "yaml.$1" >/dev/null 2>&1; then "yaml.$@"
+	elif [[ ${1-} == [-0-9]* ]]; then yaml.num "$1"
+	else
+		read -rd '' -a REPLY < <(compgen -A function yaml.)
+		fail "invalid argument '$1'; must be one of: ${REPLY[*]/yaml./}"
+	fi
+}
+
+yaml.--width() { yaml_width="$1" yaml "${@:2}"; }
+yaml.--indent() { local yaml_indent; printf -v yaml_indent "%$1s" ''; yaml "${@:2}"; }
+
+
+# Data structures
+
+yaml-struct() {
+	local yaml_items=()
+	yaml_prefix="$yaml_prefix$yaml_indent" yaml_width=$((yaml_width - ${#yaml_indent})) ::block "${@:4}"
+	printf -v REPLY "%s$2" "${yaml_items[@]-${3:+ }}"
+	printf -v REPLY "$1" "${yaml_key:+$yaml_key}" "${REPLY%$2}"
+	if (( ! ${#yaml_items[@]} )); then
+		: "${REPLY# }"$'\n'; REPLY=${_%${yaml_key+$'\n'}}  # Empty list/map = always inline
+	elif [[ ! ${yaml_key+_} || $REPLY == *$'\n'* ]] || (( ${#REPLY} > yaml_width + ${#yaml_indent} )); then
+		# Too wide, at the root, or already multi-line; prefix every line
+		printf -v REPLY -- "$yaml_prefix$3%s\\n" "${yaml_items[@]/%$'\n'/}"
+		if [[ ${yaml_key+_} ]]; then
+			# We have a parent; generate a start line of '-' or 'key:'
+			REPLY="${yaml_key+$yaml_key$'\n'}$REPLY"
+		fi
+	fi
+}
+
+yaml.map() { yaml-struct "%s { %s }" ", " ""  "${@-yaml-mapitem}";  }
+yaml.list(){ yaml-struct "%s [%s ]"  ","  "-" "${@-yaml-listitem}"; }
+
+yaml-mapitem() { local yaml_key=; yaml.key "$1"; yaml_key=${REPLY# }: yaml "${@:2}"; yaml_items+=("$REPLY"); }
+yaml-listitem(){ yaml_key= yaml "$@"; yaml_items+=("$REPLY"); }
+
+
+# Scalars
+
+yaml-scalar() {
+	if [[ ${yaml_key+_} ]]; then REPLY="$yaml_key $1"; else REPLY="$yaml_prefix$1"$'\n'; fi
+}
+
+yaml.true() { yaml-scalar true; }
+yaml.false(){ yaml-scalar false; }
+yaml.null() { yaml-scalar null; }
+yaml.json() { yaml-scalar "$1"; }
+
+yaml.int(){
+	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)$ ]] || fail "invalid json int: '$1'" || return
+	yaml-scalar "$1"
+}
+yaml.num(){
+	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)([.][0-9]+)?([Ee][-+]?[0-9]+)?$ ]] ||
+		fail "invalid json number: '$1'" || return
+	yaml-scalar "$1"
+}
+
+yaml.str() {
+	local lines=${1//[^$'\n']/};
+	if [[ ${yaml_key+_} && "$lines" && $1 != *$'\r\n' ]] &&
+	(( ${#lines}>1 || ${#1} > yaml_width - ${#yaml_key} )); then
+		# more than one line, or too wide, but no \r\n
+		local indic=; [[ $1 != ' '* ]] || indic=${#yaml_indent}
+		case $1 in *$'\n\n') indic+=+;; *$'\n') :;; *) set -- "$1"$'\n'; indic+='-' ;; esac
+		: "${1//$'\n'/$'\n'$yaml_prefix}"
+		REPLY="${yaml_key+$yaml_key }|$indic"$'\n'"$yaml_prefix${_%$yaml_prefix}"
+		return
+	else yaml.key "$1"
+	fi
+}
+
+yaml.key() {
+	if [[ $1 =~ [[:cntrl:]]|$'\u00A0'|$'\u0085'|$'\u2028'|$'\u2029' ]]; then
+		yaml.dquote "$1"; return
+	fi
+	case $1 in
+		[-\?\|\<\>=\!\%\@[:digit:]]*|*[:{}\[\],\&\*\?[:space:]\#\"\']*) yaml-scalar "'${1//\'/\'\'}'" ;;
+		''|null|'~'|true|false|y|n|yes|no|on|off|Null|NULL) yaml-scalar "'$1'" ;;
+		*) yaml-scalar "$1"
+	esac
+}
+
+yaml.dquote(){
+	[[ $1 != *\\* ]] || set -- "${1//\\/\\\\}"
+	[[ $1 != *'"'* ]] || set -- "${1//\"/\\\"}"
+	if [[ $1 == *[[:cntrl:]]* ]]; then
+		set -- "${1//$'\n'/\\n}"; set -- "${1//$'\r'/\\r}"; set -- "${1//$'\t'/\\t}"  # \n\r\t
+		if [[ $1 == *[[:cntrl:]]* ]]; then
+			local r s=${1//[^[:cntrl:]]}
+			while [[ $s ]]; do
+				printf -v r \\\\u%04x "'${s:0:1}"; set -- "${1//${s:0:1}/$r}"
+				s=${s//${s:0:1}/}
+			done
+		fi
+	fi
+	: "${1/#/\"}"; yaml-scalar "${_/%/\"}"  # add surrounding quotes
+}
