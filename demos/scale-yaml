@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-declare -g yaml_indent='  ' yaml_width=120 yaml_prefix='' yaml_key
+yaml_indent='  '
+yaml_width=120
+yaml_prefix=
+
 yaml() {
 	if declare -F "yaml.$1" >/dev/null 2>&1; then "yaml.$@"
 	elif [[ ${1-} == [-0-9]* ]]; then yaml.num "$1"
@@ -80,7 +83,7 @@ yaml.key() {
 		yaml.dquote "$1"; return
 	fi
 	case $1 in
-		[-\?\|\<\>=\!\%\@[:digit:]]*|*[:{}\[\],\&\*\?[:space:]\#\"\']*) yaml-scalar "'${1//\'/\'\'}'" ;;
+		[-\?\|\<\>=\!\%\@[:digit:]]*|*[:{}\[\],\&\*\?[:space:]\#\"\']*) yaml-scalar "'${1//\'/$'\'\''}'" ;;
 		''|null|'~'|true|false|y|n|yes|no|on|off|Null|NULL) yaml-scalar "'$1'" ;;
 		*) yaml-scalar "$1"
 	esac
