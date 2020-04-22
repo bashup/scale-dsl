@@ -4,19 +4,22 @@ json() {
 	elif [[ ${1-} == [-0-9]* ]]; then json.num "$1"
 	else
 		read -rd '' -a REPLY < <(compgen -A function json.)
-		fail "invalid argument '$1'; must be one of: ${REPLY[*]/json./}"
+		json-fail 64 "invalid argument '$1'; must be one of: ${REPLY[*]/json./}"
 	fi
 }
 
-json.map:(){
-	local items=(); ::block __mapitem; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
-}
-__mapitem() { json.str "$1"; local key=$REPLY; json "${@:2}"; items+=("$key:$REPLY,"); }
+# Redefine this to change error handling
+json-fail() { echo "$2" >&2; exit "$1"; }
 
-json.list:(){
-	local items=(); ::block __listitem; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
+json.map(){
+	local items=(); ::block json-mapitem; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
 }
-__listitem(){ json "$@"; items+=("$REPLY,"); }
+json-mapitem() { json.str "$1"; local key=$REPLY; json "${@:2}"; items+=("$key:$REPLY,"); }
+
+json.list(){
+	local items=(); ::block json-listitem; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
+}
+json-listitem(){ json "$@"; items+=("$REPLY,"); }
 
 json.json() { REPLY=$1; }
 json.true() { REPLY=true; }
@@ -24,12 +27,12 @@ json.false(){ REPLY=false; }
 json.null() { REPLY=null; }
 
 json.int(){
-	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)$ ]] || fail "invalid json int: '$1'" || return
+	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)$ ]] || json-fail 65 "invalid json int: '$1'" || return
 	REPLY=$1
 }
 json.num(){
 	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)([.][0-9]+)?([Ee][-+]?[0-9]+)?$ ]] ||
-		fail "invalid json number: '$1'" || return
+		json-fail 65 "invalid json number: '$1'" || return
 	REPLY=$1
 }
 

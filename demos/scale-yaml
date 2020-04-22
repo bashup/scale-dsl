@@ -9,13 +9,15 @@ yaml() {
 	elif [[ ${1-} == [-0-9]* ]]; then yaml.num "$1"
 	else
 		read -rd '' -a REPLY < <(compgen -A function yaml.)
-		fail "invalid argument '$1'; must be one of: ${REPLY[*]/yaml./}"
+		yaml-fail 64 "invalid argument '$1'; must be one of: ${REPLY[*]/yaml./}"
 	fi
 }
 
 yaml.--width() { yaml_width="$1" yaml "${@:2}"; }
 yaml.--indent() { local yaml_indent; printf -v yaml_indent "%$1s" ''; yaml "${@:2}"; }
 
+# Redefine this to change error handling
+yaml-fail() { echo "$2" >&2; exit "$1"; }
 
 # Data structures
 
@@ -55,12 +57,12 @@ yaml.null() { yaml-scalar null; }
 yaml.json() { yaml-scalar "$1"; }
 
 yaml.int(){
-	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)$ ]] || fail "invalid json int: '$1'" || return
+	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)$ ]] || yaml-fail 65 "invalid json int: '$1'" || return
 	yaml-scalar "$1"
 }
 yaml.num(){
 	[[ ${1-} =~ ^-?(0|[1-9][0-9]*)([.][0-9]+)?([Ee][-+]?[0-9]+)?$ ]] ||
-		fail "invalid json number: '$1'" || return
+		yaml-fail 65 "invalid json number: '$1'" || return
 	yaml-scalar "$1"
 }
 

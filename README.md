@@ -1,24 +1,24 @@
-# Scala-like Embedded DSLs for Bash
+# Scala-inspired Embedded DSLs for Bash
 
 Bash, by its nature, is a very "flat" language, that lacks the ability to cleanly define nested data structures  (e.g. JSON, HTML, or any other structured content or configuration).
 
 Enter [scale-dsl](scale-dsl): a bash 3.2+ micro-library that lets you create **S**tructured **C**onfiguration **A**nd **L**anguage **E**xtensions.  By sourcing it, or copy-pasting it into your script, you get access to these three simple syntax enhancements:
 
-* `~` *block-command...* `{{` *block...* `}}`
-* `+` *block-phrase...*  `{{` *block...* `}}`
-* `-` *item-phrase...*
+* `~` *commands...* `{{` *block...* `}}`
+* `+` *dsl-phrase...*  `{{` *block...* `}}`
+* `-` *dsl-phrase...*
 
-Block commands and block phrases wrap the execution of their attached blocks, and control how any nested phrases will be interpreted.  With properly implemented block functions (e.g. [demos/scale-json](demos/scale-json)), you can then write code like this:
+The `~` alias makes *block* available to *commands*, allowing them to run the block (or not), and determine what DSL will be active within the block.  The `-` alias sends a phrase to the current DSL as arguments for interpretation.  And `+` is shorthand for `~ -` -- that is,  sending a phrase to the current DSL, *and* giving it a block to run with either the same or a different DSL syntax.
+
+Put them all together with a decent set of DSL functions (e.g. [demos/scale-json](demos/scale-json)), and you can write bash code that looks like this:
 
 ```shell
 contact-as-json() {
-  ~ json map:
-  {{
+  ~ json map; {{
     - first_name str "$1"
     - last_name  str "$2"
     - email      str "$3"
-    + tags list:
-    {{
+    + tags list; {{
         local tag
         for tag in "${@:4}"; do
             - str "$tag"
@@ -28,7 +28,7 @@ contact-as-json() {
 }
 ```
 
-and then run it like this:
+and run it like this:
 
 ~~~sh
     $ contact-as-json Bob Dobbs the.bob@example.com fake demo
@@ -42,11 +42,11 @@ You're not limited to JSON or even text generation, though.  Your DSL phrases ca
 
 ## Basic Use
 
-The basic idea of SCALE DSLs is that a `~`-prefixed command controls when (or whether) to run the block that follows it, optionally setting an "interpreter" that will be called whenever a  `+` or `-` phrase is executed from within that block.  For example, here's the simplest possible DSL interpreter you can make with SCALE:
+The basic idea of SCALE DSLs is that a `~`-prefixed command series controls when (or whether) to run the block that follows it, optionally setting an "interpreter" that will be called whenever a  `+` or `-` keyword phrase is executed from within that block.  For example, here's the simplest possible DSL interpreter you can make with SCALE:
 
 ~~~sh
     $ source scale-dsl  # load the library
-    $ ~ ::block echo && {{ - Hello; - World; }}
+    $ ~ ::block echo; {{ - Hello; - World; }}
     Hello
     World
 ~~~
@@ -60,17 +60,17 @@ Now let's try a slightly more complex example, with nesting:
     $ indented() { ::block indent-with ""; }
 
     $ indent-with() {
-    >     # Output the indent and the input, skipping the + or - in between
+    >     # Output the indent and the input
     >     local indent=$1; shift; echo "$indent$*"
     >     # Got a block?  Run it with a deeper indent
     >     ::block indent-with "    $indent"
     > }
 
-    $ ~ indented && {{
+    $ ~ indented; {{
     >   - This is a test
-    >   + of indenting && {{
+    >   + of indenting ; {{
     >     - nested
-    >     + deeper && {{
+    >     + deeper ; {{
     >         for i in 1 2 3; do
     >             - yeah "($i)"
     >         done
@@ -99,11 +99,11 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
 ~~~sh
     $ say-hello() { - "Hello, $1!"; }
 
-    $ ~ ::block echo && {{ say-hello world; }}
+    $ ~ ::block echo; {{ say-hello world; }}
     Hello, world!
 
-    $ ~ indented && {{
-    >   + "My response:" && {{ say-hello yourself; }};
+    $ ~ indented; {{
+    >   + "My response:"; {{ say-hello yourself; }};
     > }}
     My response:
         Hello, yourself!
@@ -111,7 +111,7 @@ Notice that DSL blocks are still plain bash code, and can therefore use control 
 
 Notice how the `-` in the `say-hello` function produces different results in each use, expanding to `echo` or `indent-with "    "`, according to where it's called from.  (Notice, too, that we invoked it as a *normal bash function*, not as a `-` line unto itself.  If we had put a `-` in front of it, we would have ended up calling  `echo say-hello world` and `indent-with "    " say-hello yourself`, which would have produced rather different results!)
 
-Although you *can* separate what's inside a  `{{`...`}}` block into different functions, do note that you *can't* separate a block from its opening `+` or `~` statement: they **must** be immediately adjacent and within the same enclosing bash block or control structure.  (Otherwise, a bash syntax error will occur.)
+Although you *can* separate what's inside a  `{{`...`}}` block into different functions, do note that you *can't* separate a block from its opening `+` or `~`: they **must** be immediately adjacent and within the same enclosing bash block or control structure.  (Otherwise, a bash syntax error will occur.)
 
 ### Variables and Parameters
 
