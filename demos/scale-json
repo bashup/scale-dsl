@@ -12,12 +12,12 @@ json() {
 json-fail() { echo "$2" >&2; exit "$1"; }
 
 json.map(){
-	local items=(); ::block json-mapitem; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
+	(($#))||set -- ::block json-mapitem; local items=(); "$@"; REPLY=${items[@]+${items[*]}}; REPLY="{${REPLY%,}}"
 }
 json-mapitem() { json.str "$1"; local key=$REPLY; json "${@:2}"; items+=("$key:$REPLY,"); }
 
 json.list(){
-	local items=(); ::block json-listitem; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
+	(($#))||set -- ::block json-listitem; local items=(); "$@"; REPLY=${items[@]+${items[*]}}; REPLY="[${REPLY%,}]"
 }
 json-listitem(){ json "$@"; items+=("$REPLY,"); }
 

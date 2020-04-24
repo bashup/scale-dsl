@@ -23,7 +23,7 @@ yaml-fail() { echo "$2" >&2; exit "$1"; }
 
 yaml-struct() {
 	local yaml_items=()
-	yaml_prefix="$yaml_prefix$yaml_indent" yaml_width=$((yaml_width - ${#yaml_indent})) ::block "${@:4}"
+	yaml_prefix="$yaml_prefix$yaml_indent" yaml_width=$((yaml_width - ${#yaml_indent})) "${@:4}"
 	printf -v REPLY "%s$2" "${yaml_items[@]-${3:+ }}"
 	printf -v REPLY "$1" "${yaml_key:+$yaml_key}" "${REPLY%$2}"
 	if (( ! ${#yaml_items[@]} )); then
@@ -38,8 +38,8 @@ yaml-struct() {
 	fi
 }
 
-yaml.map() { yaml-struct "%s { %s }" ", " ""  "${@-yaml-mapitem}";  }
-yaml.list(){ yaml-struct "%s [%s ]"  ","  "-" "${@-yaml-listitem}"; }
+yaml.map() { (($#))||set -- ::block yaml-mapitem;  yaml-struct "%s { %s }" ", " ""  "$@";  }
+yaml.list(){ (($#))||set -- ::block yaml-listitem; yaml-struct "%s [%s ]"  ","  "-" "$@"; }
 
 yaml-mapitem() { local yaml_key=; yaml.key "$1"; yaml_key=${REPLY# }: yaml "${@:2}"; yaml_items+=("$REPLY"); }
 yaml-listitem(){ yaml_key= yaml "$@"; yaml_items+=("$REPLY"); }
