@@ -33,7 +33,12 @@ yaml-struct() {
 		printf -v REPLY -- "$yaml_prefix$3%s\\n" "${yaml_items[@]/%$'\n'/}"
 		if [[ ${yaml_key+_} ]]; then
 			# We have a parent; generate a start line of '-' or 'key:'
-			REPLY="${yaml_key+$yaml_key$'\n'}$REPLY"
+			if [[ $yaml_key || $3 ]]; then
+				# Don't nest lists on a single line
+				REPLY="${yaml_key+$yaml_key$'\n'}$REPLY"
+			else # map as list item: bring it up onto the list item line
+				REPLY="${yaml_indent# }${REPLY#$yaml_prefix}"
+			fi
 		fi
 	fi
 }

@@ -53,8 +53,7 @@ And non-leaf, non-root data structures are inlined if they fit:
     - { a: b }
 
     $ ~ show yaml --width 8 list; {{ + map; {{ - a str b; }}; }}
-    -
-      a: b
+    - a: b
 ~~~
 
 But non-empty root structures are never inlined, no matter how easily they'd fit:
@@ -158,6 +157,24 @@ Strings aren't quoted unless they need to be, and single-quote strings are used 
     $ ~ show yaml list; {{ + map; {{ - x list; }}; }}
     - { x: [  ] }
 
+# Align list items that are maps based on indentation
+
+    $ ~ yaml_indent='   ' yaml_width=10 show yaml list; {{
+    >   + map; {{
+    >     + x list; {{ - str foo; + list; {{ - str bar; }}; }}
+    >   }}
+    >   + map; {{
+    >     - w str foo
+    >     - z str bar
+    >   }}
+    > }}
+    -  x:
+          - foo
+          -
+             - bar
+    -  w: foo
+       z: bar
+
 # Multiline strings inside structures
 
     $ ~ show yaml list; {{ - str $'the quick\nbrown fox\n'; - int 42; }}
@@ -190,8 +207,7 @@ Strings aren't quoted unless they need to be, and single-quote strings are used 
       - |
         the quick
         brown fox
-      -
-        blue: 42
+      - blue: 42
         '22': true
 
 ~~~
