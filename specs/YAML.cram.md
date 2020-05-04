@@ -175,6 +175,24 @@ Strings aren't quoted unless they need to be, and single-quote strings are used 
     -  w: foo
        z: bar
 
+# Don't wrap dicts into list items if a minimal diff is requested
+
+    $ ~ yaml_mindiff=y yaml_width=10 show yaml list; {{
+    >   + map; {{
+    >     + x list; {{ - str foo; }}
+    >   }}
+    >   + map; {{
+    >     - w str foo
+    >     - z str bar
+    >   }}
+    > }}
+    -
+      x:
+        - foo
+    -
+      w: foo
+      z: bar
+
 # Multiline strings inside structures
 
     $ ~ show yaml list; {{ - str $'the quick\nbrown fox\n'; - int 42; }}

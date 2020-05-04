@@ -3,6 +3,7 @@
 yaml_indent='  '
 yaml_width=120
 yaml_prefix=
+yaml_mindiff=
 
 yaml() {
 	if declare -F "yaml.$1" >/dev/null 2>&1; then "yaml.$@"
@@ -33,8 +34,8 @@ yaml-struct() {
 		printf -v REPLY -- "$yaml_prefix$3%s\\n" "${yaml_items[@]/%$'\n'/}"
 		if [[ ${yaml_key+_} ]]; then
 			# We have a parent; generate a start line of '-' or 'key:'
-			if [[ $yaml_key || $3 ]]; then
-				# Don't nest lists on a single line
+			if [[ $3 || $yaml_mindiff || $yaml_key ]]; then
+				# Start nested structure on a new line if it's a list, in a map, or we're using min-diff mode
 				REPLY="${yaml_key+$yaml_key$'\n'}$REPLY"
 			else # map as list item: bring it up onto the list item line
 				REPLY="${yaml_indent# }${REPLY#$yaml_prefix}"
