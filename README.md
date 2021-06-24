@@ -34,6 +34,8 @@ can be run to generate valid JSON for arbitrary arguments:
 
 Of couse, you're not limited to producing JSON, or even text.  Your outline items (and block-accepting functions) can set variables, run programs, or do whatever other kind of computation is required.  It's entirely up to you (and your outline handlers).
 
+### Syntax
+
 SCALE works by adding just three new syntactic structures to bash:
 
 * `~` *shell-command(s)...* `; {{` *block...* `}}`
